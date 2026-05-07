@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
-import numpy as np
 import joblib
 from pathlib import Path
 
@@ -34,7 +33,7 @@ df["Date"] = pd.to_datetime(df["Date"])
 
 app = FastAPI(
     title="StockSense AI API",
-    description="ML reorder prediction, monthly forecasting, and rule-based inventory chatbot.",
+    description="ML reorder prediction and rule-based inventory chatbot.",
     version="1.0"
 )
 
@@ -65,11 +64,6 @@ class PredictRequest(BaseModel):
     Waste_Percentage: float
 
 
-class ForecastRequest(BaseModel):
-    item_name: str
-    period: str = "next_month"
-
-
 class ChatRequest(BaseModel):
     message: str
 
@@ -95,19 +89,44 @@ def detect_item(message: str):
 def detect_period(message: str):
     message = message.lower()
 
+    if "tomorrow" in message or "next day" in message:
+        return "next_day"
+
+    if "today" in message:
+        return "today"
+
+    if "this week" in message:
+        return "this_week"
+
+    if "next week" in message:
+        return "next_week"
+
     if "this month" in message:
         return "this_month"
 
     if "next month" in message:
         return "next_month"
 
+    if "week" in message:
+        return "next_week"
+
     if "month" in message:
         return "next_month"
 
-    if "week" in message:
-        return "this_week"
-
     return "next_month"
+
+
+def format_period(period: str):
+    mapping = {
+        "today": "today",
+        "next_day": "tomorrow",
+        "this_week": "this week",
+        "next_week": "next week",
+        "this_month": "this month",
+        "next_month": "next month"
+    }
+
+    return mapping.get(period, period.replace("_", " "))
 
 
 def forecast_item(item_name: str, period: str = "next_month"):
@@ -118,31 +137,60 @@ def forecast_item(item_name: str, period: str = "next_month"):
             "error": f"No inventory data found for item: {item_name}"
         }
 
+    item_df = item_df.sort_values("Date")
+    unit = item_df["Unit"].mode()[0]
+
+    if period in ["today", "next_day"]:
+        recent_days = item_df.tail(7)
+        forecast_value = recent_days["Inventory_To_Order"].mean()
+        method = "7-day moving average"
+
+    elif period in ["this_week", "next_week"]:
+        item_df["Week"] = item_df["Date"].dt.to_period("W")
+
+        weekly_orders = (
+            item_df.groupby("Week")["Inventory_To_Order"]
+            .sum()
+            .sort_index()
+        )
+
+        recent_weeks = weekly_orders.tail(4)
+        forecast_value = recent_weeks.mean()
+        method = "4-week moving average"
+
+    else:
+        item_df["Month"] = item_df["Date"].dt.to_period("M")
+
+        monthly_orders = (
+            item_df.groupby("Month")["Inventory_To_Order"]
+            .sum()
+            .sort_index()
+        )
+
+        recent_months = monthly_orders.tail(3)
+        forecast_value = recent_months.mean()
+        method = "3-month moving average"
+
     item_df["Month"] = item_df["Date"].dt.to_period("M")
 
-    monthly_orders = (
+    monthly_history = (
         item_df.groupby("Month")["Inventory_To_Order"]
         .sum()
         .sort_index()
     )
-
-    recent_months = monthly_orders.tail(3)
-
-    forecast_value = recent_months.mean()
-
-    unit = item_df["Unit"].mode()[0]
 
     return {
         "item": item_name,
         "period": period,
         "forecasted_quantity": round(float(forecast_value), 2),
         "unit": unit,
-        "method": "3-month moving average",
+        "method": method,
         "monthly_history": {
             str(month): round(float(value), 2)
-            for month, value in monthly_orders.items()
+            for month, value in monthly_history.items()
         }
     }
+
 
 def build_reorder_summary(prediction: float, unit: str, item: str):
     if prediction < 10:
@@ -152,7 +200,6 @@ def build_reorder_summary(prediction: float, unit: str, item: str):
     else:
         risk = "High"
 
-    # Better plural handling (for decimals too)
     unit_clean = unit if abs(prediction - 1) < 1e-6 else unit + "s"
 
     return {
@@ -169,7 +216,7 @@ def build_reorder_summary(prediction: float, unit: str, item: str):
 def home():
     return {
         "message": "StockSense AI API is running.",
-        "routes": ["/predict", "/forecast", "/chat"]
+        "routes": ["/predict", "/chat", "/items"]
     }
 
 
@@ -202,48 +249,21 @@ def predict_inventory(request: PredictRequest):
     }
 
 
-@app.post("/forecast")
-def forecast_inventory(request: ForecastRequest):
-    result = forecast_item(
-        item_name=request.item_name,
-        period=request.period
-    )
-
-    if "error" in result:
-        return result
-
-    return {
-        "item": result["item"],
-        "period": result["period"],
-        "forecasted_quantity": result["forecasted_quantity"],
-        "unit": result["unit"],
-        "method": result["method"],
-        "monthly_history": result["monthly_history"],
-        "message": (
-            f"You should plan to buy about "
-            f"{result['forecasted_quantity']} {result['unit']} of "
-            f"{result['item']} for {result['period']}."
-        )
-    }
-
-
 @app.post("/chat")
 def chat(request: ChatRequest):
     message = request.message.lower().strip()
 
     detected_item = detect_item(message)
     detected_period = detect_period(message)
+    human_period = format_period(detected_period)
 
     inventory_intent_words = [
         "buy", "order", "need", "forecast", "month", "week",
-        "stock", "inventory", "how much", "purchase"
+        "tomorrow", "today", "stock", "inventory", "how much", "purchase"
     ]
 
     is_inventory_question = any(word in message for word in inventory_intent_words)
 
-    # ----------------------------
-    # Greeting / intro
-    # ----------------------------
     if message in ["hi", "hello", "hey", "help"]:
         return {
             "reply": (
@@ -252,9 +272,6 @@ def chat(request: ChatRequest):
             )
         }
 
-    # ----------------------------
-    # Unknown item handling
-    # ----------------------------
     if detected_item is None and is_inventory_question:
         sample_items = get_known_items()[:6]
 
@@ -265,9 +282,6 @@ def chat(request: ChatRequest):
             )
         }
 
-    # ----------------------------
-    # Forecast questions
-    # ----------------------------
     if detected_item and is_inventory_question:
         result = forecast_item(detected_item, detected_period)
 
@@ -289,15 +303,12 @@ def chat(request: ChatRequest):
             "reply": (
                 f"Based on recent inventory trends, you should plan to buy about "
                 f"{result['forecasted_quantity']} {result['unit']} of {result['item']} "
-                f"for {detected_period.replace('_', ' ')}. "
+                f"for {human_period}. "
                 f"This estimate uses a {result['method']}.{history_text} "
                 f"You can also ask me why this amount may be high or how to reduce waste."
             )
         }
 
-    # ----------------------------
-    # Explain why orders may be high
-    # ----------------------------
     if "why" in message or "high" in message:
         return {
             "reply": (
@@ -307,9 +318,6 @@ def chat(request: ChatRequest):
             )
         }
 
-    # ----------------------------
-    # Reduce waste
-    # ----------------------------
     if "waste" in message and ("reduce" in message or "lower" in message):
         return {
             "reply": (
@@ -318,9 +326,6 @@ def chat(request: ChatRequest):
             )
         }
 
-    # ----------------------------
-    # Define waste
-    # ----------------------------
     if "waste" in message:
         return {
             "reply": (
@@ -329,9 +334,6 @@ def chat(request: ChatRequest):
             )
         }
 
-    # ----------------------------
-    # Define seasonal factor
-    # ----------------------------
     if "seasonal" in message:
         return {
             "reply": (
@@ -340,9 +342,6 @@ def chat(request: ChatRequest):
             )
         }
 
-    # ----------------------------
-    # Define lead time
-    # ----------------------------
     if "lead time" in message:
         return {
             "reply": (
@@ -351,9 +350,6 @@ def chat(request: ChatRequest):
             )
         }
 
-    # ----------------------------
-    # Default GPT-lite fallback
-    # ----------------------------
     return {
         "reply": (
             "I can help with inventory forecasting, reorder explanations, and waste reduction. "
