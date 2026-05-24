@@ -13,6 +13,7 @@ import sys
 os.environ.setdefault("LOKY_MAX_CPU_COUNT", "1")
 
 import joblib
+import mlflow
 import numpy as np
 import pandas as pd
 
@@ -48,6 +49,8 @@ from backend.ml_features import (  # noqa: E402
 RANDOM_STATE = 42
 DATA_PATH = SCRIPT_DIR / "restaurant_inventory_with_targets.csv"
 MODEL_PATH = SCRIPT_DIR / "reorder_model_tuned.pkl"
+MLFLOW_EXPERIMENT_NAME = "stocksense-reorder-model"
+MLFLOW_TRACKING_URI = f"sqlite:///{(PROJECT_ROOT / 'mlflow.db').as_posix()}"
 
 # %% [markdown]
 # ## Load Data
@@ -196,9 +199,29 @@ def evaluate_model(name, pipeline):
 
 
 results = []
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+
 for model_name, regressor in candidate_models.items():
     print(f"Training {model_name}...")
-    results.append(evaluate_model(model_name, make_pipeline(regressor)))
+    result = evaluate_model(model_name, make_pipeline(regressor))
+
+    with mlflow.start_run(run_name=model_name):
+        mlflow.log_param("model_name", model_name)
+        mlflow.log_param("random_state", RANDOM_STATE)
+        mlflow.log_param("training_rows", X_train.shape[0])
+        mlflow.log_param("testing_rows", X_test.shape[0])
+        mlflow.log_param("target", "Target_Adjustment")
+
+        for param_name, param_value in regressor.get_params().items():
+            mlflow.log_param(f"hyperparameter_{param_name}", param_value)
+
+        mlflow.log_metric("mae", result["MAE"])
+        mlflow.log_metric("rmse", result["RMSE"])
+        mlflow.log_metric("r2", result["R2"])
+        mlflow.log_metric("adjustment_mae", result["Adjustment_MAE"])
+
+    results.append(result)
 
 comparison = pd.DataFrame(results).drop(columns=["Pipeline"]).sort_values("MAE")
 comparison
@@ -217,6 +240,15 @@ print(f"R2: {best_result['R2']:.3f}")
 
 joblib.dump(best_model, MODEL_PATH)
 print(f"Saved model to {MODEL_PATH}")
+
+with mlflow.start_run(run_name=f"best-{best_result['Model']}"):
+    mlflow.log_param("selected_model", best_result["Model"])
+    mlflow.log_param("model_output_path", str(MODEL_PATH))
+    mlflow.log_metric("best_mae", best_result["MAE"])
+    mlflow.log_metric("best_rmse", best_result["RMSE"])
+    mlflow.log_metric("best_r2", best_result["R2"])
+    mlflow.log_metric("best_adjustment_mae", best_result["Adjustment_MAE"])
+    mlflow.log_artifact(MODEL_PATH)
 
 # %% [markdown]
 # ## Edge Case Checks

@@ -1,4 +1,6 @@
 -r requirements.txt
 pytest==9.0.2
 httpx==0.28.1
-
+mlflow-skinny==3.7.0
+sqlalchemy==2.0.45
+alembic==1.18.4

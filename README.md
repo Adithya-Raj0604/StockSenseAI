@@ -94,6 +94,28 @@ Run tests:
 .\venv\Scripts\python.exe -m pytest
 ```
 
+## MLflow Experiment Tracking
+
+The training script logs each candidate model run to MLflow with the model name, train/test row counts, target name, and evaluation metrics. This repo uses `mlflow-skinny` with a local SQLite tracking database so the production backend dependencies stay small.
+
+Install dev dependencies:
+
+```powershell
+.\venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
+```
+
+Train and log metrics:
+
+```powershell
+.\venv\Scripts\python.exe model\train_model.py
+```
+
+Optional: install the full MLflow package in a separate training environment with `pandas<3` if you want the local MLflow UI. The project runtime currently pins `pandas==3.0.2`, while full MLflow requires `pandas<3`.
+
+```powershell
+python -m pip install "pandas<3" mlflow
+```
+
 ## AWS Deployment Path
 
 This repo is set up for AWS SAM using a Lambda container image.
@@ -139,4 +161,3 @@ For recruiter/demo traffic, expected monthly cost is usually low, especially wit
 - Containerized Python ML runtime for scikit-learn inference.
 - Infrastructure-as-code with AWS SAM.
 - Cost-conscious design with no always-on compute.
-

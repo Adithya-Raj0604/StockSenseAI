@@ -8,4 +8,5 @@ __pycache__/
 .aws-sam/
 samconfig.toml
 frontend/config.local.js
-
+mlruns/
+mlflow.db
