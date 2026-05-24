@@ -52,3 +52,26 @@ def test_predict_returns_reorder_recommendation():
     assert response.json()["predicted_order"] >= 0
     assert response.json()["risk_level"] in ["Low", "Medium", "High"]
 
+
+def test_predict_rounds_piece_units_and_does_not_double_pluralize():
+    payload = {
+        "Item_Name": "Eggs",
+        "Category": "Non-Veg",
+        "Subcategory": "Poultry",
+        "Unit": "pieces",
+        "Current_Stock": 16,
+        "Reorder_Level": 7,
+        "Daily_Usage": 4,
+        "Lead_Time": 2,
+        "Price_per_Unit": 6.0,
+        "Seasonal_Factor": 0.87,
+        "Waste_Percentage": 1.52,
+    }
+
+    response = client.post("/predict", json=payload)
+    data = response.json()
+
+    assert response.status_code == 200
+    assert isinstance(data["predicted_order"], int)
+    assert data["unit"] == "pieces"
+    assert "piecess" not in data["message"]

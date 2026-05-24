@@ -155,14 +155,43 @@ def forecast_item(item_name: str, period: str = "next_month"):
     return {
         "item": item_name,
         "period": period,
-        "forecasted_quantity": round(float(forecast_value), 2),
+        "forecasted_quantity": format_quantity_value(forecast_value, unit),
         "unit": unit,
         "method": method,
         "monthly_history": {
-            str(month): round(float(value), 2)
+            str(month): format_quantity_value(value, unit)
             for month, value in monthly_history.items()
         },
     }
+
+
+def is_whole_number_unit(unit: str):
+    return unit.strip().lower() in {"piece", "pieces", "unit", "units", "each"}
+
+
+def format_quantity_value(value: float, unit: str):
+    numeric_value = max(0, float(value))
+
+    if is_whole_number_unit(unit):
+        return int(round(numeric_value))
+
+    return round(numeric_value, 2)
+
+
+def format_unit(unit: str, quantity: float):
+    normalized_unit = unit.strip()
+    lower_unit = normalized_unit.lower()
+
+    if lower_unit in {"pieces", "piece"}:
+        return "piece" if abs(quantity - 1) < 1e-6 else "pieces"
+
+    if lower_unit in {"units", "unit"}:
+        return "unit" if abs(quantity - 1) < 1e-6 else "units"
+
+    if lower_unit in {"kg", "liter"}:
+        return normalized_unit
+
+    return normalized_unit if abs(quantity - 1) < 1e-6 else f"{normalized_unit}s"
 
 
 def build_reorder_summary(prediction: float, unit: str, item: str):
@@ -173,11 +202,14 @@ def build_reorder_summary(prediction: float, unit: str, item: str):
     else:
         risk = "High"
 
-    unit_clean = unit if abs(prediction - 1) < 1e-6 else f"{unit}s"
+    display_quantity = format_quantity_value(prediction, unit)
+    unit_clean = format_unit(unit, display_quantity)
 
     return {
         "risk_level": risk,
-        "summary": f"The recommended order is {prediction:.2f} {unit_clean} of {item}.",
+        "predicted_order": display_quantity,
+        "unit": unit_clean,
+        "summary": f"The recommended order is {display_quantity} {unit_clean} of {item}.",
     }
 
 
@@ -218,8 +250,8 @@ def predict_inventory(request: PredictRequest):
 
     return {
         "item": request.Item_Name,
-        "predicted_order": round(prediction, 2),
-        "unit": request.Unit,
+        "predicted_order": summary["predicted_order"],
+        "unit": summary["unit"],
         "risk_level": summary["risk_level"],
         "message": summary["summary"],
     }

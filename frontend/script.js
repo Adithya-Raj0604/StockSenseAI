@@ -20,6 +20,57 @@ const chatForm = document.querySelector("#chatForm");
 const chatMessage = document.querySelector("#chatMessage");
 const chatLog = document.querySelector("#chatLog");
 const loadItemsButton = document.querySelector("#loadItemsButton");
+const infoPopover = document.querySelector("#infoPopover");
+const infoTitle = document.querySelector("#infoTitle");
+const infoBody = document.querySelector("#infoBody");
+const infoClose = document.querySelector("#infoClose");
+
+const parameterInfo = {
+  Item_Name: {
+    title: "Item",
+    body: "Identifies which ingredient is being predicted. The model learns item-specific patterns, so the same stock and usage values can produce different recommendations for chicken, milk, rice, or other items.",
+  },
+  Category: {
+    title: "Category",
+    body: "Groups the item into a broad inventory type such as Veg or Non-Veg. It gives the model context about storage behavior, demand patterns, and how similar items tend to be reordered.",
+  },
+  Subcategory: {
+    title: "Subcategory",
+    body: "Adds a more specific item family such as Dairy, Meat, Vegetable, or Grain. This helps the prediction compare the item against closer inventory peers than category alone.",
+  },
+  Unit: {
+    title: "Unit",
+    body: "Defines how the reorder amount is measured, such as kg, liter, or pieces. It keeps the result interpretable and helps the model understand scale when paired with usage and stock values.",
+  },
+  Current_Stock: {
+    title: "Current Stock",
+    body: "Shows how much is currently available. Higher current stock usually lowers the recommended order, while low stock raises urgency when daily usage, lead time, or reorder level are high.",
+  },
+  Reorder_Level: {
+    title: "Reorder Level",
+    body: "Represents the minimum stock threshold before replenishment is needed. A higher reorder level typically increases the recommendation because the system tries to avoid falling below that safety point.",
+  },
+  Daily_Usage: {
+    title: "Daily Usage",
+    body: "Estimates how quickly the item is consumed each day. It is one of the strongest drivers: higher usage increases the order amount, especially when lead time is long or current stock is low.",
+  },
+  Lead_Time: {
+    title: "Lead Time",
+    body: "Measures how many days it takes for a supplier order to arrive. Longer lead time usually increases the recommendation because the restaurant must cover more days before restocking.",
+  },
+  Price_per_Unit: {
+    title: "Price Per Unit",
+    body: "Captures the cost of each unit. It can help the model learn purchasing behavior, since expensive items may have different stocking patterns than low-cost staples.",
+  },
+  Seasonal_Factor: {
+    title: "Seasonal Factor",
+    body: "Adjusts for demand changes during busier or slower periods. Values above 1 suggest higher expected demand and often increase the reorder recommendation.",
+  },
+  Waste_Percentage: {
+    title: "Waste Percentage",
+    body: "Estimates expected loss from spoilage, trimming, over-preparation, or unused stock. Higher waste can increase the suggested order because some inventory may not be usable.",
+  },
+};
 
 const savedApiUrl = localStorage.getItem("stocksenseApiUrl") || "http://localhost:8000";
 apiUrlInput.value = savedApiUrl;
@@ -49,6 +100,25 @@ function fillDefaults(item) {
   Object.entries(defaults).forEach(([key, value]) => {
     const input = document.querySelector(`#${key}`);
     if (input) input.value = value;
+  });
+  updateWholeNumberInputs();
+}
+
+function usesWholeNumberUnits() {
+  return itemSelect.value === "Eggs" || document.querySelector("#Unit").value.trim().toLowerCase() === "pieces";
+}
+
+function updateWholeNumberInputs() {
+  const wholeNumberFields = ["Current_Stock", "Reorder_Level", "Daily_Usage"];
+  const shouldUseWholeNumbers = usesWholeNumberUnits();
+
+  wholeNumberFields.forEach((fieldId) => {
+    const input = document.querySelector(`#${fieldId}`);
+    input.step = shouldUseWholeNumbers ? "1" : "0.01";
+
+    if (shouldUseWholeNumbers && input.value !== "") {
+      input.value = Math.max(0, Math.round(Number(input.value)));
+    }
   });
 }
 
@@ -92,9 +162,13 @@ function readPredictionPayload() {
 }
 
 function showPrediction(data) {
+  const predictedOrder = Number.isInteger(data.predicted_order)
+    ? data.predicted_order
+    : Number(data.predicted_order).toFixed(2);
+
   predictionResult.innerHTML = `
     <span>${data.risk_level} reorder risk</span>
-    <strong>${data.predicted_order} ${data.unit}</strong>
+    <strong>${predictedOrder} ${data.unit}</strong>
     <p>${data.message}</p>
   `;
 }
@@ -107,9 +181,50 @@ function addChatMessage(text, role) {
   chatLog.scrollTop = chatLog.scrollHeight;
 }
 
+function openParameterInfo(key, button) {
+  const info = parameterInfo[key];
+  if (!info) return;
+
+  infoTitle.textContent = info.title;
+  infoBody.textContent = info.body;
+  infoPopover.hidden = false;
+
+  const buttonRect = button.getBoundingClientRect();
+  const panelRect = document.querySelector(".forecast-panel").getBoundingClientRect();
+  const left = Math.max(16, Math.min(buttonRect.left - panelRect.left, panelRect.width - 356));
+  infoPopover.style.left = `${left}px`;
+  infoPopover.style.top = `${buttonRect.bottom - panelRect.top + 8}px`;
+}
+
+function closeParameterInfo() {
+  infoPopover.hidden = true;
+}
+
 itemSelect.addEventListener("change", () => fillDefaults(itemSelect.value));
+document.querySelector("#Unit").addEventListener("input", updateWholeNumberInputs);
 apiUrlInput.addEventListener("change", loadItems);
 loadItemsButton.addEventListener("click", loadItems);
+infoClose.addEventListener("click", closeParameterInfo);
+
+document.querySelectorAll(".info-button").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openParameterInfo(button.dataset.infoKey, button);
+  });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeParameterInfo();
+  }
+});
+
+document.addEventListener("click", (event) => {
+  if (!infoPopover.hidden && !infoPopover.contains(event.target)) {
+    closeParameterInfo();
+  }
+});
 
 predictForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -156,4 +271,3 @@ chatForm.addEventListener("submit", async (event) => {
 fillItemSelect();
 addChatMessage("Ask for reorder forecasts, waste guidance, or why an order is high.", "assistant");
 loadItems();
-

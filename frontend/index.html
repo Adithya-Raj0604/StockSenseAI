@@ -32,51 +32,57 @@
 
         <form id="predictForm" class="form-grid">
           <label>
-            Item
+            <span class="field-label">Item <button class="info-button" type="button" data-info-key="Item_Name" aria-label="Explain Item">i</button></span>
             <select id="Item_Name" name="Item_Name"></select>
           </label>
           <label>
-            Category
+            <span class="field-label">Category <button class="info-button" type="button" data-info-key="Category" aria-label="Explain Category">i</button></span>
             <input name="Category" id="Category" required>
           </label>
           <label>
-            Subcategory
+            <span class="field-label">Subcategory <button class="info-button" type="button" data-info-key="Subcategory" aria-label="Explain Subcategory">i</button></span>
             <input name="Subcategory" id="Subcategory" required>
           </label>
           <label>
-            Unit
+            <span class="field-label">Unit <button class="info-button" type="button" data-info-key="Unit" aria-label="Explain Unit">i</button></span>
             <input name="Unit" id="Unit" required>
           </label>
           <label>
-            Current Stock
+            <span class="field-label">Current Stock <button class="info-button" type="button" data-info-key="Current_Stock" aria-label="Explain Current Stock">i</button></span>
             <input name="Current_Stock" id="Current_Stock" type="number" step="0.01" min="0" required>
           </label>
           <label>
-            Reorder Level
+            <span class="field-label">Reorder Level <button class="info-button" type="button" data-info-key="Reorder_Level" aria-label="Explain Reorder Level">i</button></span>
             <input name="Reorder_Level" id="Reorder_Level" type="number" step="0.01" min="0" required>
           </label>
           <label>
-            Daily Usage
+            <span class="field-label">Daily Usage <button class="info-button" type="button" data-info-key="Daily_Usage" aria-label="Explain Daily Usage">i</button></span>
             <input name="Daily_Usage" id="Daily_Usage" type="number" step="0.01" min="0" required>
           </label>
           <label>
-            Lead Time
+            <span class="field-label">Lead Time <button class="info-button" type="button" data-info-key="Lead_Time" aria-label="Explain Lead Time">i</button></span>
             <input name="Lead_Time" id="Lead_Time" type="number" step="1" min="0" required>
           </label>
           <label>
-            Price Per Unit
+            <span class="field-label">Price Per Unit <button class="info-button" type="button" data-info-key="Price_per_Unit" aria-label="Explain Price Per Unit">i</button></span>
             <input name="Price_per_Unit" id="Price_per_Unit" type="number" step="0.01" min="0" required>
           </label>
           <label>
-            Seasonal Factor
+            <span class="field-label">Seasonal Factor <button class="info-button" type="button" data-info-key="Seasonal_Factor" aria-label="Explain Seasonal Factor">i</button></span>
             <input name="Seasonal_Factor" id="Seasonal_Factor" type="number" step="0.01" min="0" required>
           </label>
           <label>
-            Waste Percentage
+            <span class="field-label">Waste Percentage <button class="info-button" type="button" data-info-key="Waste_Percentage" aria-label="Explain Waste Percentage">i</button></span>
             <input name="Waste_Percentage" id="Waste_Percentage" type="number" step="0.01" min="0" required>
           </label>
           <button class="primary-button" type="submit">Predict Order</button>
         </form>
+
+        <div class="info-popover" id="infoPopover" hidden role="dialog" aria-live="polite">
+          <button class="info-close" id="infoClose" type="button" aria-label="Close parameter explanation">x</button>
+          <h3 id="infoTitle"></h3>
+          <p id="infoBody"></p>
+        </div>
 
         <div class="result" id="predictionResult">
           <span>Recommended order</span>
