@@ -162,8 +162,9 @@ function readPredictionPayload() {
 }
 
 function showPrediction(data) {
-  const predictedOrder = Number.isInteger(data.predicted_order)
-    ? data.predicted_order
+  const isEggPieceResult = data.item === "Eggs" || data.unit === "pieces";
+  const predictedOrder = isEggPieceResult
+    ? Math.ceil(Number(data.predicted_order))
     : Number(data.predicted_order).toFixed(2);
   const message = `The recommended order is ${predictedOrder} ${data.unit} of ${data.item}.`;
 

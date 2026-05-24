@@ -73,5 +73,6 @@ def test_predict_rounds_piece_units_and_does_not_double_pluralize():
 
     assert response.status_code == 200
     assert isinstance(data["predicted_order"], int)
+    assert data["predicted_order"] == 8
     assert data["unit"] == "pieces"
     assert "piecess" not in data["message"]

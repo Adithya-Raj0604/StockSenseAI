@@ -1,4 +1,5 @@
 from functools import lru_cache
+from math import ceil
 
 import joblib
 import pandas as pd
@@ -173,7 +174,7 @@ def format_quantity_value(value: float, unit: str):
     numeric_value = max(0, float(value))
 
     if is_whole_number_unit(unit):
-        return int(round(numeric_value))
+        return int(ceil(numeric_value))
 
     return round(numeric_value, 2)
 
