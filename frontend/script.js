@@ -161,6 +161,21 @@ function readPredictionPayload() {
   return payload;
 }
 
+function displayUnit(quantity, unit) {
+  const numericQuantity = Number(quantity);
+  const normalizedUnit = unit.trim().toLowerCase();
+
+  if (normalizedUnit === "pieces" || normalizedUnit === "piece") {
+    return Math.abs(numericQuantity - 1) < 1e-6 ? "piece" : "pieces";
+  }
+
+  if (normalizedUnit === "units" || normalizedUnit === "unit") {
+    return Math.abs(numericQuantity - 1) < 1e-6 ? "unit" : "units";
+  }
+
+  return unit;
+}
+
 function showPrediction(data) {
   const isEggPieceResult = data.item === "Eggs" || data.unit === "pieces";
   const predictedOrder = isEggPieceResult
@@ -172,14 +187,17 @@ function showPrediction(data) {
   const operationalMinimum = isEggPieceResult
     ? Math.ceil(Number(data.operational_minimum))
     : Number(data.operational_minimum).toFixed(2);
-  const message = `The recommended order is ${predictedOrder} ${data.unit} of ${data.item}.`;
+  const predictedUnit = displayUnit(predictedOrder, data.unit);
+  const modelUnit = displayUnit(modelPrediction, data.unit);
+  const minimumUnit = displayUnit(operationalMinimum, data.unit);
+  const message = `The recommended order is ${predictedOrder} ${predictedUnit} of ${data.item}.`;
   const explanation = data.adjusted_by_guardrail
-    ? `Adjusted from the ML estimate of ${modelPrediction} ${data.unit}; the operational minimum is ${operationalMinimum} ${data.unit} based on stock, reorder level, usage, lead time, and waste.`
+    ? `Adjusted from the ML estimate of ${modelPrediction} ${modelUnit}; the operational minimum is ${operationalMinimum} ${minimumUnit} based on stock, reorder level, usage, lead time, and waste.`
     : data.explanation;
 
   predictionResult.innerHTML = `
     <span>${data.risk_level} reorder risk</span>
-    <strong>${predictedOrder} ${data.unit}</strong>
+    <strong>${predictedOrder} ${predictedUnit}</strong>
     <p>${message}</p>
     <p class="result-detail">${explanation}</p>
   `;
