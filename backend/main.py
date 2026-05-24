@@ -1,5 +1,8 @@
 from functools import lru_cache
 from math import ceil
+import os
+
+os.environ.setdefault("LOKY_MAX_CPU_COUNT", "1")
 
 import joblib
 import pandas as pd
@@ -195,22 +198,47 @@ def format_unit(unit: str, quantity: float):
     return normalized_unit if abs(quantity - 1) < 1e-6 else f"{normalized_unit}s"
 
 
-def build_reorder_summary(prediction: float, unit: str, item: str):
-    if prediction < 10:
+def calculate_operational_minimum(request: PredictRequest):
+    projected_stock_after_lead_time = request.Current_Stock - (request.Daily_Usage * request.Lead_Time)
+    required_reorder = max(0, request.Reorder_Level - projected_stock_after_lead_time)
+    waste_multiplier = 1 + max(0, request.Waste_Percentage) / 100
+
+    return required_reorder * waste_multiplier
+
+
+def classify_risk(quantity: float):
+    if quantity < 10:
         risk = "Low"
-    elif prediction < 50:
+    elif quantity < 50:
         risk = "Medium"
     else:
         risk = "High"
 
-    display_quantity = format_quantity_value(prediction, unit)
+    return risk
+
+
+def build_reorder_summary(model_prediction: float, operational_minimum: float, unit: str, item: str):
+    final_prediction = max(model_prediction, operational_minimum)
+    display_quantity = format_quantity_value(final_prediction, unit)
+    display_model_prediction = format_quantity_value(model_prediction, unit)
+    display_operational_minimum = format_quantity_value(operational_minimum, unit)
     unit_clean = format_unit(unit, display_quantity)
+    adjusted_by_guardrail = operational_minimum > model_prediction
 
     return {
-        "risk_level": risk,
+        "risk_level": classify_risk(display_quantity),
         "predicted_order": display_quantity,
+        "model_prediction": display_model_prediction,
+        "operational_minimum": display_operational_minimum,
+        "adjusted_by_guardrail": adjusted_by_guardrail,
         "unit": unit_clean,
         "summary": f"The recommended order is {display_quantity} {unit_clean} of {item}.",
+        "explanation": (
+            "The ML estimate was below the operational minimum needed to cover lead-time usage and restore stock "
+            "to the reorder level, so the recommendation was raised."
+            if adjusted_by_guardrail
+            else "The ML estimate is above the operational minimum needed for the current stock, usage, and lead time."
+        ),
     }
 
 
@@ -240,11 +268,13 @@ def get_items():
 def predict_inventory(request: PredictRequest):
     input_df = pd.DataFrame([request.model_dump()])
 
-    prediction = model.predict(input_df)[0]
-    prediction = max(0, float(prediction))
+    operational_minimum = calculate_operational_minimum(request)
+    model_adjustment = float(model.predict(input_df)[0])
+    model_prediction = max(0, operational_minimum + model_adjustment)
 
     summary = build_reorder_summary(
-        prediction=prediction,
+        model_prediction=model_prediction,
+        operational_minimum=operational_minimum,
         unit=request.Unit,
         item=request.Item_Name,
     )
@@ -252,9 +282,14 @@ def predict_inventory(request: PredictRequest):
     return {
         "item": request.Item_Name,
         "predicted_order": summary["predicted_order"],
+        "model_prediction": summary["model_prediction"],
+        "model_adjustment": round(model_adjustment, 2),
+        "operational_minimum": summary["operational_minimum"],
+        "adjusted_by_guardrail": summary["adjusted_by_guardrail"],
         "unit": summary["unit"],
         "risk_level": summary["risk_level"],
         "message": summary["summary"],
+        "explanation": summary["explanation"],
     }
 
 

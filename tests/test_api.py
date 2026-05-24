@@ -76,3 +76,54 @@ def test_predict_rounds_piece_units_and_does_not_double_pluralize():
     assert data["predicted_order"] == 8
     assert data["unit"] == "pieces"
     assert "piecess" not in data["message"]
+
+
+def test_predict_uses_operational_minimum_when_reorder_deficit_is_large():
+    payload = {
+        "Item_Name": "Eggs",
+        "Category": "Non-Veg",
+        "Subcategory": "Poultry",
+        "Unit": "pieces",
+        "Current_Stock": 20,
+        "Reorder_Level": 70,
+        "Daily_Usage": 4,
+        "Lead_Time": 2,
+        "Price_per_Unit": 6.0,
+        "Seasonal_Factor": 0.87,
+        "Waste_Percentage": 1.52,
+    }
+
+    response = client.post("/predict", json=payload)
+    data = response.json()
+
+    assert response.status_code == 200
+    assert data["predicted_order"] == 61
+    assert data["operational_minimum"] == 59
+    assert data["model_prediction"] >= data["operational_minimum"]
+    assert data["adjusted_by_guardrail"] is False
+    assert data["risk_level"] == "High"
+
+
+def test_predict_respects_zero_lead_time_but_still_restores_reorder_level():
+    payload = {
+        "Item_Name": "Eggs",
+        "Category": "Non-Veg",
+        "Subcategory": "Poultry",
+        "Unit": "pieces",
+        "Current_Stock": 23,
+        "Reorder_Level": 24,
+        "Daily_Usage": 20,
+        "Lead_Time": 0,
+        "Price_per_Unit": 0.2,
+        "Seasonal_Factor": 0.87,
+        "Waste_Percentage": 1.52,
+    }
+
+    response = client.post("/predict", json=payload)
+    data = response.json()
+
+    assert response.status_code == 200
+    assert data["predicted_order"] == data["operational_minimum"]
+    assert data["operational_minimum"] == 2
+    assert data["adjusted_by_guardrail"] is True
+    assert data["unit"] == "pieces"

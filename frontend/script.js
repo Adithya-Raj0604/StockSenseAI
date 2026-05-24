@@ -166,12 +166,22 @@ function showPrediction(data) {
   const predictedOrder = isEggPieceResult
     ? Math.ceil(Number(data.predicted_order))
     : Number(data.predicted_order).toFixed(2);
+  const modelPrediction = isEggPieceResult
+    ? Math.ceil(Number(data.model_prediction))
+    : Number(data.model_prediction).toFixed(2);
+  const operationalMinimum = isEggPieceResult
+    ? Math.ceil(Number(data.operational_minimum))
+    : Number(data.operational_minimum).toFixed(2);
   const message = `The recommended order is ${predictedOrder} ${data.unit} of ${data.item}.`;
+  const explanation = data.adjusted_by_guardrail
+    ? `Adjusted from the ML estimate of ${modelPrediction} ${data.unit}; the operational minimum is ${operationalMinimum} ${data.unit} based on stock, reorder level, usage, lead time, and waste.`
+    : data.explanation;
 
   predictionResult.innerHTML = `
     <span>${data.risk_level} reorder risk</span>
     <strong>${predictedOrder} ${data.unit}</strong>
     <p>${message}</p>
+    <p class="result-detail">${explanation}</p>
   `;
 }
 
