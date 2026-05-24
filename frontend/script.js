@@ -165,11 +165,12 @@ function showPrediction(data) {
   const predictedOrder = Number.isInteger(data.predicted_order)
     ? data.predicted_order
     : Number(data.predicted_order).toFixed(2);
+  const message = `The recommended order is ${predictedOrder} ${data.unit} of ${data.item}.`;
 
   predictionResult.innerHTML = `
     <span>${data.risk_level} reorder risk</span>
     <strong>${predictedOrder} ${data.unit}</strong>
-    <p>${data.message}</p>
+    <p>${message}</p>
   `;
 }
 
