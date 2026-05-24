@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>StockSense AI</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Serverless ML Inventory Forecasting</p>
+        <h1>StockSense AI</h1>
+      </div>
+      <div class="status" id="apiStatus">API not connected</div>
+    </header>
+
+    <main class="layout">
+      <section class="panel forecast-panel" aria-labelledby="forecastTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Prediction</p>
+            <h2 id="forecastTitle">Reorder Recommendation</h2>
+          </div>
+          <button class="secondary-button" id="loadItemsButton" type="button">Sync Items</button>
+        </div>
+
+        <label class="wide-field">
+          API URL
+          <input id="apiUrl" type="url" placeholder="https://your-api-id.execute-api.region.amazonaws.com">
+        </label>
+
+        <form id="predictForm" class="form-grid">
+          <label>
+            Item
+            <select id="Item_Name" name="Item_Name"></select>
+          </label>
+          <label>
+            Category
+            <input name="Category" id="Category" required>
+          </label>
+          <label>
+            Subcategory
+            <input name="Subcategory" id="Subcategory" required>
+          </label>
+          <label>
+            Unit
+            <input name="Unit" id="Unit" required>
+          </label>
+          <label>
+            Current Stock
+            <input name="Current_Stock" id="Current_Stock" type="number" step="0.01" min="0" required>
+          </label>
+          <label>
+            Reorder Level
+            <input name="Reorder_Level" id="Reorder_Level" type="number" step="0.01" min="0" required>
+          </label>
+          <label>
+            Daily Usage
+            <input name="Daily_Usage" id="Daily_Usage" type="number" step="0.01" min="0" required>
+          </label>
+          <label>
+            Lead Time
+            <input name="Lead_Time" id="Lead_Time" type="number" step="1" min="0" required>
+          </label>
+          <label>
+            Price Per Unit
+            <input name="Price_per_Unit" id="Price_per_Unit" type="number" step="0.01" min="0" required>
+          </label>
+          <label>
+            Seasonal Factor
+            <input name="Seasonal_Factor" id="Seasonal_Factor" type="number" step="0.01" min="0" required>
+          </label>
+          <label>
+            Waste Percentage
+            <input name="Waste_Percentage" id="Waste_Percentage" type="number" step="0.01" min="0" required>
+          </label>
+          <button class="primary-button" type="submit">Predict Order</button>
+        </form>
+
+        <div class="result" id="predictionResult">
+          <span>Recommended order</span>
+          <strong>Run a prediction</strong>
+          <p>Choose an item and submit the form to see the reorder amount.</p>
+        </div>
+      </section>
+
+      <section class="panel chat-panel" aria-labelledby="chatTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Assistant</p>
+            <h2 id="chatTitle">Inventory Chat</h2>
+          </div>
+        </div>
+
+        <div class="chat-log" id="chatLog" aria-live="polite"></div>
+
+        <form id="chatForm" class="chat-form">
+          <input id="chatMessage" type="text" placeholder="How much milk should I buy next month?" required>
+          <button class="primary-button" type="submit">Send</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

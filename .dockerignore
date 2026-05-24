@@ -1,0 +1,8 @@
+.git
+.aws-sam
+venv
+__pycache__
+*.pyc
+.pytest_cache
+model/train_model.ipynb
+

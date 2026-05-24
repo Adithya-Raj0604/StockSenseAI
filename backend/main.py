@@ -1,54 +1,18 @@
+from functools import lru_cache
+
+import joblib
+import pandas as pd
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import pandas as pd
-import joblib
-from pathlib import Path
 
+from backend.settings import settings
 
-# ============================================================
-# PATHS
-# ============================================================
+try:
+    from mangum import Mangum
+except ImportError:
+    Mangum = None
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-MODEL_PATH = BASE_DIR / "model" / "reorder_model_tuned.pkl"
-DATA_PATH = BASE_DIR / "model" / "restaurant_inventory_with_targets.csv"
-
-
-# ============================================================
-# LOAD MODEL AND DATA
-# ============================================================
-
-model = joblib.load(MODEL_PATH)
-
-df = pd.read_csv(DATA_PATH)
-df.columns = df.columns.str.strip()
-df["Date"] = pd.to_datetime(df["Date"])
-
-
-# ============================================================
-# FASTAPI APP
-# ============================================================
-
-app = FastAPI(
-    title="StockSense AI API",
-    description="ML reorder prediction and rule-based inventory chatbot.",
-    version="1.0"
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# ============================================================
-# REQUEST MODELS
-# ============================================================
 
 class PredictRequest(BaseModel):
     Item_Name: str
@@ -68,49 +32,77 @@ class ChatRequest(BaseModel):
     message: str
 
 
-# ============================================================
-# HELPER FUNCTIONS
-# ============================================================
+@lru_cache(maxsize=1)
+def load_model():
+    return joblib.load(settings.model_path)
+
+
+@lru_cache(maxsize=1)
+def load_inventory_data():
+    inventory_df = pd.read_csv(settings.data_path)
+    inventory_df.columns = inventory_df.columns.str.strip()
+    inventory_df["Date"] = pd.to_datetime(inventory_df["Date"])
+    return inventory_df
+
+
+model = load_model()
+df = load_inventory_data()
+
+
+app = FastAPI(
+    title="StockSense AI API",
+    description="ML reorder prediction and rule-based inventory chatbot.",
+    version="1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 def get_known_items():
     return sorted(df["Item_Name"].dropna().unique().tolist())
 
 
 def detect_item(message: str):
-    message = message.lower()
+    normalized_message = message.lower()
 
     for item in get_known_items():
-        if item.lower() in message:
+        if item.lower() in normalized_message:
             return item
 
     return None
 
 
 def detect_period(message: str):
-    message = message.lower()
+    normalized_message = message.lower()
 
-    if "tomorrow" in message or "next day" in message:
+    if "tomorrow" in normalized_message or "next day" in normalized_message:
         return "next_day"
 
-    if "today" in message:
+    if "today" in normalized_message:
         return "today"
 
-    if "this week" in message:
+    if "this week" in normalized_message:
         return "this_week"
 
-    if "next week" in message:
+    if "next week" in normalized_message:
         return "next_week"
 
-    if "this month" in message:
+    if "this month" in normalized_message:
         return "this_month"
 
-    if "next month" in message:
+    if "next month" in normalized_message:
         return "next_month"
 
-    if "week" in message:
+    if "week" in normalized_message:
         return "next_week"
 
-    if "month" in message:
+    if "month" in normalized_message:
         return "next_month"
 
     return "next_month"
@@ -123,7 +115,7 @@ def format_period(period: str):
         "this_week": "this week",
         "next_week": "next week",
         "this_month": "this month",
-        "next_month": "next month"
+        "next_month": "next month",
     }
 
     return mapping.get(period, period.replace("_", " "))
@@ -133,9 +125,7 @@ def forecast_item(item_name: str, period: str = "next_month"):
     item_df = df[df["Item_Name"].str.lower() == item_name.lower()].copy()
 
     if item_df.empty:
-        return {
-            "error": f"No inventory data found for item: {item_name}"
-        }
+        return {"error": f"No inventory data found for item: {item_name}"}
 
     item_df = item_df.sort_values("Date")
     unit = item_df["Unit"].mode()[0]
@@ -147,37 +137,20 @@ def forecast_item(item_name: str, period: str = "next_month"):
 
     elif period in ["this_week", "next_week"]:
         item_df["Week"] = item_df["Date"].dt.to_period("W")
-
-        weekly_orders = (
-            item_df.groupby("Week")["Inventory_To_Order"]
-            .sum()
-            .sort_index()
-        )
-
+        weekly_orders = item_df.groupby("Week")["Inventory_To_Order"].sum().sort_index()
         recent_weeks = weekly_orders.tail(4)
         forecast_value = recent_weeks.mean()
         method = "4-week moving average"
 
     else:
         item_df["Month"] = item_df["Date"].dt.to_period("M")
-
-        monthly_orders = (
-            item_df.groupby("Month")["Inventory_To_Order"]
-            .sum()
-            .sort_index()
-        )
-
+        monthly_orders = item_df.groupby("Month")["Inventory_To_Order"].sum().sort_index()
         recent_months = monthly_orders.tail(3)
         forecast_value = recent_months.mean()
         method = "3-month moving average"
 
     item_df["Month"] = item_df["Date"].dt.to_period("M")
-
-    monthly_history = (
-        item_df.groupby("Month")["Inventory_To_Order"]
-        .sum()
-        .sort_index()
-    )
+    monthly_history = item_df.groupby("Month")["Inventory_To_Order"].sum().sort_index()
 
     return {
         "item": item_name,
@@ -188,7 +161,7 @@ def forecast_item(item_name: str, period: str = "next_month"):
         "monthly_history": {
             str(month): round(float(value), 2)
             for month, value in monthly_history.items()
-        }
+        },
     }
 
 
@@ -200,36 +173,39 @@ def build_reorder_summary(prediction: float, unit: str, item: str):
     else:
         risk = "High"
 
-    unit_clean = unit if abs(prediction - 1) < 1e-6 else unit + "s"
+    unit_clean = unit if abs(prediction - 1) < 1e-6 else f"{unit}s"
 
     return {
         "risk_level": risk,
-        "summary": f"The recommended order is {prediction:.2f} {unit_clean} of {item}."
+        "summary": f"The recommended order is {prediction:.2f} {unit_clean} of {item}.",
     }
 
-
-# ============================================================
-# ROUTES
-# ============================================================
 
 @app.get("/")
 def home():
     return {
         "message": "StockSense AI API is running.",
-        "routes": ["/predict", "/chat", "/items"]
+        "routes": ["/health", "/predict", "/chat", "/items"],
+    }
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "model_loaded": model is not None,
+        "items_loaded": len(df) > 0,
     }
 
 
 @app.get("/items")
 def get_items():
-    return {
-        "items": get_known_items()
-    }
+    return {"items": get_known_items()}
 
 
 @app.post("/predict")
 def predict_inventory(request: PredictRequest):
-    input_df = pd.DataFrame([request.dict()])
+    input_df = pd.DataFrame([request.model_dump()])
 
     prediction = model.predict(input_df)[0]
     prediction = max(0, float(prediction))
@@ -237,7 +213,7 @@ def predict_inventory(request: PredictRequest):
     summary = build_reorder_summary(
         prediction=prediction,
         unit=request.Unit,
-        item=request.Item_Name
+        item=request.Item_Name,
     )
 
     return {
@@ -245,7 +221,7 @@ def predict_inventory(request: PredictRequest):
         "predicted_order": round(prediction, 2),
         "unit": request.Unit,
         "risk_level": summary["risk_level"],
-        "message": summary["summary"]
+        "message": summary["summary"],
     }
 
 
@@ -258,8 +234,18 @@ def chat(request: ChatRequest):
     human_period = format_period(detected_period)
 
     inventory_intent_words = [
-        "buy", "order", "need", "forecast", "month", "week",
-        "tomorrow", "today", "stock", "inventory", "how much", "purchase"
+        "buy",
+        "order",
+        "need",
+        "forecast",
+        "month",
+        "week",
+        "tomorrow",
+        "today",
+        "stock",
+        "inventory",
+        "how much",
+        "purchase",
     ]
 
     is_inventory_question = any(word in message for word in inventory_intent_words)
@@ -267,7 +253,7 @@ def chat(request: ChatRequest):
     if message in ["hi", "hello", "hey", "help"]:
         return {
             "reply": (
-                "Hi, I’m StockSense AI. I can help forecast ingredient orders, explain inventory predictions, "
+                "Hi, I'm StockSense AI. I can help forecast ingredient orders, explain inventory predictions, "
                 "and suggest ways to reduce waste. Try asking: 'How much milk should I buy next month?'"
             )
         }
@@ -277,7 +263,7 @@ def chat(request: ChatRequest):
 
         return {
             "reply": (
-                "I don’t see that item in the restaurant inventory data, so I can’t create an order forecast for it. "
+                "I don't see that item in the restaurant inventory data, so I can't create an order forecast for it. "
                 f"Try asking about items like {', '.join(sample_items)}."
             )
         }
@@ -286,9 +272,7 @@ def chat(request: ChatRequest):
         result = forecast_item(detected_item, detected_period)
 
         if "error" in result:
-            return {
-                "reply": result["error"]
-            }
+            return {"reply": result["error"]}
 
         history = result.get("monthly_history", {})
         history_text = ""
@@ -356,3 +340,6 @@ def chat(request: ChatRequest):
             "For example, ask: 'How much milk should I buy next month?' or 'Why is my chicken order high?'"
         )
     }
+
+
+handler = Mangum(app) if Mangum else None
