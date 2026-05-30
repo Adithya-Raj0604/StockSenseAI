@@ -10,4 +10,3 @@ COPY model/reorder_model_tuned.pkl ./model/reorder_model_tuned.pkl
 COPY model/restaurant_inventory_with_targets.csv ./model/restaurant_inventory_with_targets.csv
 
 CMD ["backend.main.handler"]
-

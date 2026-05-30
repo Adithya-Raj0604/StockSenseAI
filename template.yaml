@@ -5,7 +5,7 @@ Description: StockSense AI serverless backend and static frontend hosting.
 Parameters:
   AllowedCorsOrigins:
     Type: String
-    Default: '*'
+    Default: 'https://d321ncqj1ylu8d.cloudfront.net'
     Description: Comma-separated frontend origins allowed to call the API.
 
 Globals:
@@ -17,11 +17,20 @@ Globals:
     Environment:
       Variables:
         CORS_ORIGINS: !Ref AllowedCorsOrigins
+    Tags:
+      Project: StockSenseAI
+      Environment: Production
 
 Resources:
   StockSenseApi:
     Type: AWS::Serverless::HttpApi
     Properties:
+      Tags:
+        Project: StockSenseAI
+        Environment: Production
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 5
       CorsConfiguration:
         AllowOrigins:
           - !Ref AllowedCorsOrigins
@@ -62,6 +71,11 @@ Resources:
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:
+      Tags:
+        - Key: Project
+          Value: StockSenseAI
+        - Key: Environment
+          Value: Production
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -80,6 +94,11 @@ Resources:
   FrontendDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
+      Tags:
+        - Key: Project
+          Value: StockSenseAI
+        - Key: Environment
+          Value: Production
       DistributionConfig:
         Enabled: true
         DefaultRootObject: index.html
@@ -138,4 +157,6 @@ Outputs:
   FrontendDistributionDomain:
     Description: CloudFront domain for the static site.
     Value: !GetAtt FrontendDistribution.DomainName
-
+  FrontendDistributionId:
+    Description: CloudFront distribution ID for cache invalidations.
+    Value: !Ref FrontendDistribution

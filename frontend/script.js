@@ -11,7 +11,7 @@ const itemDefaults = {
   Tomato: { Category: "Veg", Subcategory: "Vegetable", Unit: "kg", Current_Stock: 12.84, Reorder_Level: 5.34, Daily_Usage: 0.95, Lead_Time: 4, Price_per_Unit: 40, Seasonal_Factor: 0.81, Waste_Percentage: 3.54 },
 };
 
-const apiUrlInput = document.querySelector("#apiUrl");
+const API_URL = "https://h9wwvfoq84.execute-api.us-east-1.amazonaws.com";
 const apiStatus = document.querySelector("#apiStatus");
 const itemSelect = document.querySelector("#Item_Name");
 const predictForm = document.querySelector("#predictForm");
@@ -72,11 +72,8 @@ const parameterInfo = {
   },
 };
 
-const savedApiUrl = localStorage.getItem("stocksenseApiUrl") || "http://localhost:8000";
-apiUrlInput.value = savedApiUrl;
-
 function getApiUrl() {
-  return apiUrlInput.value.trim().replace(/\/$/, "");
+  return API_URL.replace(/\/$/, "");
 }
 
 function setStatus(message, mode = "idle") {
@@ -137,7 +134,6 @@ async function request(path, options = {}) {
 
 async function loadItems() {
   setStatus("Checking API", "busy");
-  localStorage.setItem("stocksenseApiUrl", getApiUrl());
 
   try {
     const health = await request("/health");
@@ -232,7 +228,6 @@ function closeParameterInfo() {
 
 itemSelect.addEventListener("change", () => fillDefaults(itemSelect.value));
 document.querySelector("#Unit").addEventListener("input", updateWholeNumberInputs);
-apiUrlInput.addEventListener("change", loadItems);
 loadItemsButton.addEventListener("click", loadItems);
 infoClose.addEventListener("click", closeParameterInfo);
 

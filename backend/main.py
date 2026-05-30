@@ -410,4 +410,4 @@ def chat(request: ChatRequest):
     }
 
 
-handler = Mangum(app) if Mangum else None
+handler = Mangum(app, lifespan="off") if Mangum else None
