@@ -161,6 +161,14 @@ function displayUnit(quantity, unit) {
   const numericQuantity = Number(quantity);
   const normalizedUnit = unit.trim().toLowerCase();
 
+  if (["kg", "g", "ml"].includes(normalizedUnit)) {
+    return normalizedUnit;
+  }
+
+  if (["liter", "liters", "litre", "litres"].includes(normalizedUnit)) {
+    return Math.abs(numericQuantity - 1) < 1e-6 ? "liter" : "liters";
+  }
+
   if (normalizedUnit === "pieces" || normalizedUnit === "piece") {
     return Math.abs(numericQuantity - 1) < 1e-6 ? "piece" : "pieces";
   }

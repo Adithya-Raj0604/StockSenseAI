@@ -28,6 +28,7 @@ def test_chat_forecasts_known_item():
     assert response.status_code == 200
     assert "Milk" in response.json()["reply"]
     assert "next month" in response.json()["reply"]
+    assert "liters of Milk" in response.json()["reply"]
 
 
 def test_predict_returns_reorder_recommendation():
@@ -50,6 +51,8 @@ def test_predict_returns_reorder_recommendation():
     assert response.status_code == 200
     assert response.json()["item"] == "Milk"
     assert response.json()["predicted_order"] >= 0
+    assert response.json()["unit"] == "liters"
+    assert "liters of Milk" in response.json()["message"]
     assert response.json()["risk_level"] in ["Low", "Medium", "High"]
 
 

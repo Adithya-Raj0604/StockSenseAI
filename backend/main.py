@@ -186,16 +186,23 @@ def format_unit(unit: str, quantity: float):
     normalized_unit = unit.strip()
     lower_unit = normalized_unit.lower()
 
+    if lower_unit in {"kg", "g", "ml"}:
+        return lower_unit
+
+    if lower_unit in {"liter", "liters", "litre", "litres"}:
+        return "liter" if abs(quantity - 1) < 1e-6 else "liters"
+
     if lower_unit in {"pieces", "piece"}:
         return "piece" if abs(quantity - 1) < 1e-6 else "pieces"
 
     if lower_unit in {"units", "unit"}:
         return "unit" if abs(quantity - 1) < 1e-6 else "units"
 
-    if lower_unit in {"kg", "liter"}:
-        return normalized_unit
-
     return normalized_unit if abs(quantity - 1) < 1e-6 else f"{normalized_unit}s"
+
+
+def format_quantity_with_unit(quantity: float, unit: str):
+    return f"{quantity} {format_unit(unit, quantity)}"
 
 
 def calculate_operational_minimum(request: PredictRequest):
@@ -348,13 +355,13 @@ def chat(request: ChatRequest):
         if history:
             recent_history = list(history.items())[-3:]
             history_text = " Recent monthly totals were: " + ", ".join(
-                [f"{month}: {qty} {result['unit']}" for month, qty in recent_history]
+                [f"{month}: {format_quantity_with_unit(qty, result['unit'])}" for month, qty in recent_history]
             ) + "."
 
         return {
             "reply": (
                 f"Based on recent inventory trends, you should plan to buy about "
-                f"{result['forecasted_quantity']} {result['unit']} of {result['item']} "
+                f"{format_quantity_with_unit(result['forecasted_quantity'], result['unit'])} of {result['item']} "
                 f"for {human_period}. "
                 f"This estimate uses a {result['method']}.{history_text} "
                 f"You can also ask me why this amount may be high or how to reduce waste."
