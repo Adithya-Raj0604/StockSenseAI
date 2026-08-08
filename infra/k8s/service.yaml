@@ -1,0 +1,20 @@
+# Exposes the Deployment behind an AWS Network Load Balancer.
+# The NLB is provisioned automatically by the AWS cloud controller when a
+# Service of type LoadBalancer is created on EKS.
+apiVersion: v1
+kind: Service
+metadata:
+  name: stocksense
+  labels:
+    app: stocksense
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+spec:
+  type: LoadBalancer
+  selector:
+    app: stocksense # routes to pods with this label (set in deployment.yaml)
+  ports:
+    - name: http
+      port: 80 # external port on the load balancer
+      targetPort: 8000 # container port
+      protocol: TCP

@@ -1,0 +1,51 @@
+# Deployment for the StockSense server-mode container (backend/Dockerfile.server).
+# Hand-written (not eksctl/helm generated) so every field is explainable.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stocksense
+  labels:
+    app: stocksense
+spec:
+  replicas: 2 # two pods -> rolling updates have somewhere to shift traffic
+  selector:
+    matchLabels:
+      app: stocksense
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0 # never drop below full capacity during a rollout
+      maxSurge: 1 # bring one new pod up before retiring an old one
+  template:
+    metadata:
+      labels:
+        app: stocksense
+    spec:
+      containers:
+        - name: stocksense
+          # Replace with your ECR image (built from backend/Dockerfile.server).
+          image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/stocksense-server:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DEPLOYMENT
+              value: self-hosted # surfaces in /health so we can prove which backend served
+          resources:
+            requests: # scheduler reserves this; sized for pandas + sklearn load
+              cpu: "250m"
+              memory: "512Mi"
+            limits: # hard cap; matches the model's real footprint headroom
+              cpu: "1000m"
+              memory: "1Gi"
+          readinessProbe: # keep pod out of the Service until the model is loaded
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe: # restart the pod if it wedges
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20

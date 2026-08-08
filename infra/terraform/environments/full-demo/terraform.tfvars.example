@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars and fill in. Do NOT commit real values.
+region           = "us-east-1"
+azs              = ["us-east-1a", "us-east-1b"]
+ssh_ingress_cidr = "203.0.113.4/32"
+key_name         = "my-ec2-keypair"
+container_image  = "123456789012.dkr.ecr.us-east-1.amazonaws.com/stocksense-server:latest"
+ecr_registry     = "123456789012.dkr.ecr.us-east-1.amazonaws.com"

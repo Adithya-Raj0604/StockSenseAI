@@ -1,0 +1,83 @@
+name: terraform-ci
+
+# Gates Terraform changes to the LIVE environment behind PR review.
+# - On PR:   fmt check, validate, tflint, and a plan posted as a comment.
+# - On merge to main: apply (live env only).
+# full-demo is intentionally NOT automated — it is applied manually and
+# destroyed in the same session to avoid leaving expensive resources running.
+# This runs alongside the existing manual SAM deployment; it does not touch it.
+
+on:
+  pull_request:
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/terraform-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "infra/terraform/**"
+
+permissions:
+  contents: read
+  pull-requests: write # to post the plan comment
+
+env:
+  TF_VERSION: "1.9.5"
+  WORKING_DIR: infra/terraform/environments/live
+
+jobs:
+  validate:
+    name: fmt • validate • tflint • plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform fmt (check)
+        run: terraform fmt -check -recursive infra/terraform
+
+      - name: terraform init (no backend)
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform validate
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: tflint
+        working-directory: ${{ env.WORKING_DIR }}
+        run: tflint --init && tflint
+
+      # A real plan needs AWS creds. Configure OIDC / secrets, then uncomment.
+      # - name: Configure AWS credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: ${{ secrets.TF_PLAN_ROLE_ARN }}
+      #     aws-region: us-east-1
+      #
+      # - name: terraform plan
+      #   if: github.event_name == 'pull_request'
+      #   working-directory: ${{ env.WORKING_DIR }}
+      #   run: terraform plan -no-color
+
+  apply:
+    name: apply (live)
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Uncomment once AWS OIDC creds are configured:
+    # environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - name: Placeholder
+        run: echo "Configure AWS creds, then run terraform init && terraform apply -auto-approve in ${WORKING_DIR}."
