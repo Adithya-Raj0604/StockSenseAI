@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 680" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+  <style>
+    .lbl{fill:#1a2330}
+    .sub{fill:#5b6472;font-size:11px}
+    .box{stroke-width:1.5}
+    .flow{stroke:#4b5563;stroke-width:1.5;fill:none;marker-end:url(#arrow)}
+    text{dominant-baseline:middle}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="940" height="680" fill="#ffffff"/>
+  <text x="470" y="24" text-anchor="middle" class="lbl" font-size="16" font-weight="700">Self-Hosted (full-demo) — VPC · EC2 · NAT · Bastion · EKS</text>
+  <text x="470" y="42" text-anchor="middle" class="sub">Provisioned by Terraform · ephemeral: build → record → destroy</text>
+
+  <!-- User -->
+  <rect x="40" y="70" width="120" height="44" rx="6" class="box" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="100" y="92" text-anchor="middle" class="lbl" font-weight="600">User / kubectl</text>
+
+  <!-- AWS Cloud -->
+  <rect x="200" y="62" width="700" height="590" rx="10" fill="#fafafa" stroke="#f59e0b" stroke-dasharray="5 4"/>
+  <text x="216" y="80" class="sub" font-weight="700" fill="#b45309">AWS Cloud · us-east-1</text>
+
+  <!-- EKS control plane (AWS-managed, outside VPC) -->
+  <rect x="640" y="92" width="240" height="52" rx="6" class="box" fill="#e0f2fe" stroke="#0284c7"/>
+  <text x="760" y="112" text-anchor="middle" class="lbl" font-weight="600">EKS control plane</text>
+  <text x="760" y="128" text-anchor="middle" class="sub">AWS-managed · ~$0.10/hr</text>
+
+  <!-- IGW -->
+  <rect x="380" y="96" width="120" height="40" rx="6" class="box" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="440" y="116" text-anchor="middle" class="lbl" font-weight="600">Internet Gateway</text>
+
+  <!-- VPC -->
+  <rect x="224" y="156" width="652" height="474" rx="8" fill="#ffffff" stroke="#3b82f6"/>
+  <text x="240" y="174" class="sub" font-weight="700" fill="#1d4ed8">VPC 10.0.0.0/16</text>
+
+  <!-- AZ a -->
+  <rect x="240" y="188" width="308" height="424" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="4 3"/>
+  <text x="256" y="204" class="sub" font-weight="600">Availability Zone a</text>
+
+  <!-- AZ b -->
+  <rect x="560" y="188" width="300" height="424" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-dasharray="4 3"/>
+  <text x="576" y="204" class="sub" font-weight="600">Availability Zone b</text>
+
+  <!-- Public subnet a -->
+  <rect x="256" y="216" width="276" height="176" rx="6" fill="#ecfdf5" stroke="#10b981"/>
+  <text x="268" y="232" class="sub" font-weight="600" fill="#047857">Public subnet 10.0.0.0/24</text>
+  <rect x="272" y="244" width="110" height="44" rx="5" class="box" fill="#fff" stroke="#10b981"/>
+  <text x="327" y="266" text-anchor="middle" class="lbl">NAT gateway</text>
+  <rect x="272" y="300" width="110" height="44" rx="5" class="box" fill="#fff" stroke="#10b981"/>
+  <text x="327" y="322" text-anchor="middle" class="lbl">Bastion host</text>
+
+  <!-- Public subnet b -->
+  <rect x="576" y="216" width="268" height="90" rx="6" fill="#ecfdf5" stroke="#10b981"/>
+  <text x="588" y="232" class="sub" font-weight="600" fill="#047857">Public subnet 10.0.1.0/24</text>
+  <text x="710" y="272" text-anchor="middle" class="sub">(NLB / control-plane ENIs)</text>
+
+  <!-- Private subnet a -->
+  <rect x="256" y="404" width="276" height="192" rx="6" fill="#eff6ff" stroke="#3b82f6"/>
+  <text x="268" y="420" class="sub" font-weight="600" fill="#1d4ed8">Private subnet 10.0.10.0/24</text>
+  <rect x="272" y="432" width="150" height="44" rx="5" class="box" fill="#fff" stroke="#3b82f6"/>
+  <text x="347" y="454" text-anchor="middle" class="lbl">Raw EC2 app host</text>
+  <rect x="272" y="488" width="150" height="44" rx="5" class="box" fill="#fff" stroke="#3b82f6"/>
+  <text x="347" y="510" text-anchor="middle" class="lbl">EKS worker node</text>
+  <text x="347" y="556" text-anchor="middle" class="sub">SSH only via bastion</text>
+
+  <!-- Private subnet b -->
+  <rect x="576" y="404" width="268" height="192" rx="6" fill="#eff6ff" stroke="#3b82f6"/>
+  <text x="588" y="420" class="sub" font-weight="600" fill="#1d4ed8">Private subnet 10.0.11.0/24</text>
+  <rect x="592" y="432" width="150" height="44" rx="5" class="box" fill="#fff" stroke="#3b82f6"/>
+  <text x="667" y="454" text-anchor="middle" class="lbl">EKS worker node</text>
+  <text x="667" y="512" text-anchor="middle" class="sub">Deployment: 2 replicas</text>
+  <text x="667" y="530" text-anchor="middle" class="sub">Service (LoadBalancer → NLB)</text>
+
+  <!-- Flows -->
+  <path class="flow" d="M160,92 L378,110"/>            <!-- user -> IGW -->
+  <path class="flow" d="M160,100 C300,300 300,470 270,494"/> <!-- user/kubectl -> node region -->
+  <path class="flow" d="M440,136 L440,214"/>           <!-- IGW -> public subnet -->
+  <path class="flow" d="M327,344 L347,430"/>           <!-- bastion -> app host -->
+  <path class="flow" d="M382,266 C470,266 470,420 424,440" stroke-dasharray="4 3"/> <!-- NAT egress -->
+  <path class="flow" d="M760,144 L710,214"/>           <!-- control plane -> nodes -->
+
+  <text x="470" y="648" text-anchor="middle" class="sub">Least-privilege security groups · IAM roles per service · state isolated from the SAM/CloudFormation stack</text>
+</svg>

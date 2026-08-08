@@ -76,6 +76,8 @@ Live environment (optional, always-on ~$5/mo)
     -> selfhosted.<your-domain>
 ```
 
+![Full self-hosted architecture](infra/docs/architecture-diagram-full.svg)
+
 Full details, module layout, and cost math: [`infra/README.md`](infra/README.md).
 
 ---

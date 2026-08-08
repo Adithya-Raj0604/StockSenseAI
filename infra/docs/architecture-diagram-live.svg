@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 420" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+  <style>
+    .lbl{fill:#1a2330}
+    .sub{fill:#5b6472;font-size:11px}
+    .box{stroke-width:1.5}
+    .flow{stroke:#4b5563;stroke-width:1.5;fill:none;marker-end:url(#arrow)}
+    text{dominant-baseline:middle}
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="940" height="420" fill="#ffffff"/>
+  <text x="470" y="26" text-anchor="middle" class="lbl" font-size="16" font-weight="700">Self-Hosted (live) — Lightsail always-on link</text>
+  <text x="470" y="44" text-anchor="middle" class="sub">Optional · Terraform-provisioned · ~$5/mo flat (bundled static IP)</text>
+
+  <!-- User -->
+  <rect x="40" y="150" width="120" height="52" rx="6" class="box" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="100" y="170" text-anchor="middle" class="lbl" font-weight="600">User</text>
+  <text x="100" y="188" text-anchor="middle" class="sub">browser</text>
+
+  <!-- DNS -->
+  <rect x="210" y="150" width="150" height="52" rx="6" class="box" fill="#fef9c3" stroke="#ca8a04"/>
+  <text x="285" y="170" text-anchor="middle" class="lbl" font-weight="600">DNS A record</text>
+  <text x="285" y="188" text-anchor="middle" class="sub">selfhosted.&lt;domain&gt;</text>
+
+  <!-- AWS Cloud -->
+  <rect x="410" y="80" width="490" height="270" rx="10" fill="#fafafa" stroke="#f59e0b" stroke-dasharray="5 4"/>
+  <text x="426" y="98" class="sub" font-weight="700" fill="#b45309">AWS Cloud · Lightsail</text>
+
+  <!-- Static IP -->
+  <rect x="430" y="150" width="120" height="52" rx="6" class="box" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="490" y="170" text-anchor="middle" class="lbl" font-weight="600">Static IP</text>
+  <text x="490" y="188" text-anchor="middle" class="sub">bundled (no $ IPv4)</text>
+
+  <!-- Lightsail instance -->
+  <rect x="590" y="120" width="290" height="200" rx="8" fill="#eff6ff" stroke="#3b82f6"/>
+  <text x="606" y="138" class="sub" font-weight="700" fill="#1d4ed8">Lightsail instance · 1 GB (small_3_0)</text>
+
+  <rect x="612" y="152" width="246" height="52" rx="6" class="box" fill="#fff" stroke="#0284c7"/>
+  <text x="735" y="172" text-anchor="middle" class="lbl" font-weight="600">Caddy — automatic HTTPS</text>
+  <text x="735" y="190" text-anchor="middle" class="sub">Let's Encrypt · reverse proxy :443 → :8000</text>
+
+  <rect x="612" y="224" width="246" height="72" rx="6" class="box" fill="#fff" stroke="#3b82f6"/>
+  <text x="735" y="246" text-anchor="middle" class="lbl" font-weight="600">Docker container</text>
+  <text x="735" y="264" text-anchor="middle" class="sub">backend/Dockerfile.server (uvicorn)</text>
+  <text x="735" y="280" text-anchor="middle" class="sub">DEPLOYMENT=self-hosted → /health</text>
+
+  <!-- Flows -->
+  <path class="flow" d="M160,176 L206,176"/>
+  <path class="flow" d="M360,176 L426,176"/>
+  <path class="flow" d="M550,176 L608,178"/>
+  <path class="flow" d="M735,204 L735,222"/>
+
+  <text x="470" y="384" text-anchor="middle" class="sub">Same container as the serverless deployment · SSH restricted to operator IP · ports 80/443 open</text>
+  <text x="470" y="404" text-anchor="middle" class="sub">Chosen over raw EC2 for the always-on link to avoid the ~$3.60/mo IPv4 charge — see production-ec2.md</text>
+</svg>

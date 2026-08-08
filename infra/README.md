@@ -55,8 +55,13 @@ terraform apply
 
 ## Docs
 
+- [Runbook — build → record → destroy in one sitting](docs/runbook.md)
 - [Cost breakdown](docs/cost-breakdown.md)
 - [The full EC2 deployment (what Lightsail defers)](docs/production-ec2.md)
 - [Demo recording](docs/demo-recording.md)
-- Architecture diagrams: `docs/architecture-diagram-live.png`,
-  `docs/architecture-diagram-full.png` _(TODO — export from draw.io/Excalidraw)_
+
+## Architecture
+
+![Full self-hosted architecture](docs/architecture-diagram-full.svg)
+
+![Live Lightsail architecture](docs/architecture-diagram-live.svg)
