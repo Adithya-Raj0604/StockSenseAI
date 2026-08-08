@@ -261,6 +261,7 @@ def home():
 def health():
     return {
         "status": "ok",
+        "deployment": settings.deployment,
         "model_loaded": model is not None,
         "items_loaded": len(df) > 0,
     }

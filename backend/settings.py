@@ -12,6 +12,7 @@ class Settings:
             os.getenv("DATA_PATH", base_dir / "model" / "restaurant_inventory_with_targets.csv")
         )
         self.cors_origins = self._parse_cors_origins(os.getenv("CORS_ORIGINS", "*"))
+        self.deployment = os.getenv("DEPLOYMENT", "serverless")
 
     @staticmethod
     def _parse_cors_origins(value: str):

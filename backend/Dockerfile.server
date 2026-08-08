@@ -1,0 +1,29 @@
+# Web-server image for the self-hosted deployment (EC2 / EKS / Lightsail).
+# Runs the same FastAPI app as the serverless build, but under uvicorn instead
+# of the Lambda runtime. The Lambda image (backend/Dockerfile) is untouched.
+#
+# Build from the repo root so the model/ files are in context:
+#   docker build -f backend/Dockerfile.server -t stocksense-server .
+#   docker run -p 8000:8000 -e DEPLOYMENT=self-hosted stocksense-server
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Match the serverless memory headroom expectation; keep sklearn threads bounded.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    LOKY_MAX_CPU_COUNT=1 \
+    DEPLOYMENT=self-hosted
+
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
+
+COPY backend ./backend
+COPY model/reorder_model_tuned.pkl ./model/reorder_model_tuned.pkl
+COPY model/restaurant_inventory_with_targets.csv ./model/restaurant_inventory_with_targets.csv
+
+EXPOSE 8000
+
+# Import path matches the serverless build (backend.main:app is already exported).
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
